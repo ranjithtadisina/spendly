@@ -1,6 +1,7 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash
-from database.db import init_db, seed_db, create_user
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash
+from database.db import init_db, seed_db, create_user, get_user_by_email
 
 app = Flask(__name__)
 app.secret_key = "spendly-dev-secret"  # TODO: load from env var in production
@@ -47,8 +48,32 @@ def register():
     return render_template("register.html")
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    if request.method == "POST":
+        email    = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        # Server-side presence check
+        if not email or not password:
+            flash("All fields are required.", "error")
+            return render_template("login.html")
+
+        user = get_user_by_email(email)
+
+        # Generic error — don't reveal whether email exists
+        if user is None or not check_password_hash(user["password_hash"], password):
+            flash("Invalid email or password.", "error")
+            return render_template("login.html")
+
+        # Valid credentials — start session
+        session.clear()
+        session["user_id"]   = user["id"]
+        session["user_name"] = user["name"]
+
+        flash(f"Welcome back, {user['name']}!", "success")
+        return redirect(url_for("landing"))
+
     return render_template("login.html")
 
 
@@ -68,7 +93,9 @@ def privacy():
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.clear()
+    flash("You have been signed out.", "success")
+    return redirect(url_for("landing"))
 
 
 @app.route("/profile")

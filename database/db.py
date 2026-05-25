@@ -95,3 +95,13 @@ def create_user(name, email, password):
     user_id = cur.lastrowid
     conn.close()
     return user_id
+
+
+def get_user_by_email(email):
+    """Return the user row matching email (case-insensitive), or None."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM users WHERE LOWER(email) = LOWER(?)", (email,)
+    ).fetchone()
+    conn.close()
+    return row
