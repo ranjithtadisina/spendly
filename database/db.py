@@ -1,5 +1,5 @@
 import sqlite3
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_PATH = "spendly.db"
 
@@ -81,3 +81,17 @@ def seed_db():
 
     conn.commit()
     conn.close()
+
+
+def create_user(name, email, password):
+    """Insert a new user row. Raises sqlite3.IntegrityError on duplicate email."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+        (name, email, generate_password_hash(password)),
+    )
+    conn.commit()
+    user_id = cur.lastrowid
+    conn.close()
+    return user_id
